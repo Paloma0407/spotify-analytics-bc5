@@ -380,20 +380,36 @@ if prompt := st.chat_input("Ej: ¿Cuál es mi artista más escuchado?"):
 #    el LLM? ¿Qué devuelve? ¿Dónde se ejecuta el código generado?
 #    ¿Por qué el LLM no recibe los datos directamente?
 #
-#    [Tu respuesta aquí]
-#
-#
+# La arquitectura es text-to-code, lo que significa que el LLM no recibe los datos en ningún momento, sólo la descripción de su estructura: nombres de columnas, tipos de datos y valores posibles. Con esto, genera el código Python como texto y la aplicación lo ejecuta localmente mediante exec() con el DataFrame real. 
+
+# El LLM recibe dos entradas: el system prompt con la descripción que hemos mencionado y las instrucciones y restricciones (guardrails) de comportamiento. Y también recibe la pregunta del usuario como mensaje en el rol user de la API. A cambio, devuelve un JSON con tres campos: tipo, código e interpretación. La aplicación parsea el JSON, extrae el código y lo ejecuta en local. El resultado es una figura de Plotly que Streamlit muestra en la interfaz.
+
+# El LLM no recibe los datos directamente porque consumiría muchos más tokens, en este caso con cerca de 14.000 reproducciones llevaría consigo un coste elevado. Por otra parte, el LLM no necesita ver los datos para generar el código, le basta con tener la descripción de su estructura. Por último, al ejecutar en local, estamos protegiendo la privacidad de los datos.
+
+# En resumen, aprovechamos la capacidad de razonamiento del LLM para traducir preguntas en lenguaje natural a código ejecutable, sin necesidad de cargar los datos en el modelo.
+
+
 # 2. EL SYSTEM PROMPT COMO PIEZA CLAVE
 #    ¿Qué información le das al LLM y por qué? Pon un ejemplo
 #    concreto de una pregunta que funciona gracias a algo específico
 #    de tu prompt, y otro de una que falla o fallaría si quitases
 #    una instrucción.
-#
-#    [Tu respuesta aquí]
-#
-#
+
+# El system prompt se estructura en cinco bloques. Primero el rol y contexto: le indicamos al LLM que es un asistente analítico especializado en datos de Spotify con acceso a un DataFrame de 12 meses de historial de escucha. En segundo lugar, describimos las columnas del DataFrame (campo disponible, tipo y variables posibles), sin esto, el LLM no sabía que variables existen ni cómo usarlas. Tercero especificamos el formato de respuesta, por ejemplo, responder únicamente con un JSON válido y cómo responder a preguntas fuera del alcance.
+
+# Cuarto, es la parte donde está el grueso del trabajo y que hemos ido modificando para mejorar la calidad de las respuestas y su formato, estas son las Instrucciones para el código. También especificamos el tipo de gráfico, comportamiento de escucha (ej, canciones saltadas o reproducción aleatoria) y especificaciones temporales.
+
+# Por último añadimos las restricciones o guardrails para limitar errores técnicos y de seguridad. 
+# Un ejemplo de instrucción fundamental es definir df[df['skipped'] == True] para saltadas y df[df['skipped'].isna()] para no saltadas, así evitamos usar df[df['skipped'] == False], que generaría un código incorrecto al tomar valores nulos. Otro con mayor nivel de detalle es especificar que devuelva una única respuesta cuando preguntamos en singular con go.Figure() y una anotación de texto (evitando que muestre rankings por ejemplo ante la pregunta de artista o canción más escuchados).
+
+
+
 # 3. EL FLUJO COMPLETO
 #    Describe paso a paso qué ocurre desde que el usuario escribe
 #    una pregunta hasta que ve el gráfico en pantalla.
-#
-#    [Tu respuesta aquí]
+
+# Cuando el usuario escribe una pregunta, la app llama a la función get_response (), que construye dos mensajes: el system prompt que hemos visto y la pregunta del usuario en el rol user. Ambos se envían a la API de Open AI, que devuelve la respuesta del LLM como un string en formato JSON.
+
+# La app comprueba el campo tipo: si es fuera de alcance muestra sólo el texto de interpretación y si es gráfico extrae el código y lo ejecuta en local mediante exec(), que crea la variable fig con la figura de Plotly. 
+
+# Finalmente Streamlit muestra tres elementos en pantalla: el gráfico interactivo, la interpretación en texto y el código Python generado.
