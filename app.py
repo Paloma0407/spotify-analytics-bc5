@@ -2,8 +2,8 @@
 # CABECERA
 # ============================================================
 # Alumno: Paloma Rubio
-# URL Streamlit Cloud: https://...streamlit.app
-# URL GitHub: https://github.com/...
+# URL Streamlit Cloud: https://spotify-analytics-bc5-sbtdmuroa8nkmxwdftcyxf.streamlit.app/
+# URL GitHub: https://github.com/Paloma0407/spotify-analytics-bc5
 
 # ============================================================
 # IMPORTS
